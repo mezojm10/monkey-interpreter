@@ -37,6 +37,23 @@ func TestEvalIntegerExpression(t *testing.T) {
 	}
 }
 
+func TestEvalStringExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{`"hello"`, "hello"},
+		{`"world"`, "world"},
+		{`"hello" + "world"`, "helloworld"},
+		{`"hello" + " " + "world"`, "hello world"},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		testStringObject(t, evaluated, tt.expected)
+	}
+}
+
 func TestEvalBooleanExpression(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -62,6 +79,10 @@ func TestEvalBooleanExpression(t *testing.T) {
 		{"(1 < 2) == false", false},
 		{"(1 > 2) == true", false},
 		{"(1 > 2) == false", true},
+		{`"hello" == "hello"`, true},
+		{`"hello" == "world"`, false},
+		{`"hello" != "hello"`, false},
+		{`"hello" != "world"`, true},
 	}
 
 	for _, tt := range tests {
@@ -154,8 +175,20 @@ func TestErrorHandling(t *testing.T) {
 			"type mismatch: INTEGER + BOOLEAN",
 		},
 		{
+			`"hello" + false`,
+			"type mismatch: STRING + BOOLEAN",
+		},
+		{
+			`5 + "world"`,
+			"type mismatch: INTEGER + STRING",
+		},
+		{
 			"-true",
 			"unknown operator: -BOOLEAN",
+		},
+		{
+			`-"something"`,
+			"unknown operator: -STRING",
 		},
 		{
 			"true + false",
@@ -168,6 +201,10 @@ func TestErrorHandling(t *testing.T) {
 		{
 			"if (10 > 1) { true + false }",
 			"unknown operator: BOOLEAN + BOOLEAN",
+		},
+		{
+			`"hello" - "world"`,
+			"unknown operator: STRING - STRING",
 		},
 	}
 
@@ -275,6 +312,21 @@ func testIntegerObject(t *testing.T, obj object.Object, expected int64) bool {
 
 	if result.Value != expected {
 		t.Errorf("object has wrong value. got=%d, want=%d", result.Value, expected)
+		return false
+	}
+
+	return true
+}
+
+func testStringObject(t *testing.T, obj object.Object, expected string) bool {
+	result, ok := obj.(*object.String)
+	if !ok {
+		t.Errorf("object is not String. got=%T (%+v)", obj, obj)
+		return false
+	}
+
+	if result.Value != expected {
+		t.Errorf("object has wrong value. got=%q, want=%q", result.Value, expected)
 		return false
 	}
 
