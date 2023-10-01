@@ -7,16 +7,19 @@ import (
 	"github.com/mezojm10/monkey-interpreter/internal/token"
 )
 
+// Base node interface
 type Node interface {
 	TokenLiteral() string
 	String() string
 }
 
+// Every statement node implements this interface
 type Statement interface {
 	Node
 	statementNode()
 }
 
+// Every expression node implements this interface
 type Expression interface {
 	Node
 	expressionNode()
@@ -44,8 +47,86 @@ func (p *Program) String() string {
 	return out.String()
 }
 
+// Statements
+type LetStatement struct {
+	Token token.Token // the token.LET token
+	Name  *Identifier
+	Value Expression
+}
+
+func (ls *LetStatement) statementNode()       {}
+func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
+func (ls *LetStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(ls.TokenLiteral() + " ")
+	out.WriteString(ls.Name.String())
+	out.WriteString(" = ")
+
+	if ls.Value != nil {
+		out.WriteString(ls.Value.String())
+	}
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
+type ReturnStatement struct {
+	Token       token.Token // the token.RETURN token
+	ReturnValue Expression
+}
+
+func (rs *ReturnStatement) statementNode()       {}
+func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
+func (rs *ReturnStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(rs.TokenLiteral() + " ")
+
+	if rs.ReturnValue != nil {
+		out.WriteString(rs.ReturnValue.String())
+	}
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
+type ExpressionStatement struct {
+	Token      token.Token // first token of the expression
+	Expression Expression
+}
+
+func (es *ExpressionStatement) statementNode()       {}
+func (es *ExpressionStatement) TokenLiteral() string { return es.Token.Literal }
+func (es *ExpressionStatement) String() string {
+	if es.Expression != nil {
+		return es.Expression.String()
+	}
+	return ""
+}
+
+type BlockStatement struct {
+	Token      token.Token // The '{' token
+	Statements []Statement
+}
+
+func (bs *BlockStatement) statementNode()       {}
+func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
+func (bs *BlockStatement) String() string {
+	var out bytes.Buffer
+
+	for _, statement := range bs.Statements {
+		out.WriteString(statement.String())
+	}
+
+	return out.String()
+}
+
+// Expressions
 type Identifier struct {
-	Token token.Token
+	Token token.Token // token.IDENT
 	Value string
 }
 
@@ -81,7 +162,7 @@ func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
 func (b *Boolean) String() string       { return b.Token.Literal }
 
 type ArrayLiteral struct {
-	Token    token.Token
+	Token    token.Token // the [ token
 	Elements []Expression
 }
 
@@ -102,8 +183,30 @@ func (a *ArrayLiteral) String() string {
 	return out.String()
 }
 
+type HashLiteral struct {
+	Token token.Token // the { token
+	Pairs map[Expression]Expression
+}
+
+func (hl *HashLiteral) expressionNode()      {}
+func (hl *HashLiteral) TokenLiteral() string { return hl.Token.Literal }
+func (hl *HashLiteral) String() string {
+	var out bytes.Buffer
+
+	pairs := []string{}
+	for key, value := range hl.Pairs {
+		pairs = append(pairs, key.String()+": "+value.String())
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
+
+	return out.String()
+}
+
 type PrefixExpression struct {
-	Token    token.Token
+	Token    token.Token // the prefix token
 	Operator string
 	Right    Expression
 }
@@ -122,7 +225,7 @@ func (pe *PrefixExpression) String() string {
 }
 
 type InfixExpression struct {
-	Token    token.Token
+	Token    token.Token // the infix operator token
 	Left     Expression
 	Operator string
 	Right    Expression
@@ -143,7 +246,7 @@ func (ie *InfixExpression) String() string {
 }
 
 type IndexExpression struct {
-	Token token.Token
+	Token token.Token // the [ token
 	Left  Expression
 	Index Expression
 }
@@ -158,82 +261,6 @@ func (ie *IndexExpression) String() string {
 	out.WriteString("[")
 	out.WriteString(ie.Index.String())
 	out.WriteString("])")
-
-	return out.String()
-}
-
-type LetStatement struct {
-	Token token.Token
-	Name  *Identifier
-	Value Expression
-}
-
-func (ls *LetStatement) statementNode()       {}
-func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
-func (ls *LetStatement) String() string {
-	var out bytes.Buffer
-
-	out.WriteString(ls.TokenLiteral() + " ")
-	out.WriteString(ls.Name.String())
-	out.WriteString(" = ")
-
-	if ls.Value != nil {
-		out.WriteString(ls.Value.String())
-	}
-
-	out.WriteString(";")
-
-	return out.String()
-}
-
-type ReturnStatement struct {
-	Token       token.Token
-	ReturnValue Expression
-}
-
-func (rs *ReturnStatement) statementNode()       {}
-func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
-func (rs *ReturnStatement) String() string {
-	var out bytes.Buffer
-
-	out.WriteString(rs.TokenLiteral() + " ")
-
-	if rs.ReturnValue != nil {
-		out.WriteString(rs.ReturnValue.String())
-	}
-
-	out.WriteString(";")
-
-	return out.String()
-}
-
-type ExpressionStatement struct {
-	Token      token.Token
-	Expression Expression
-}
-
-func (es *ExpressionStatement) statementNode()       {}
-func (es *ExpressionStatement) TokenLiteral() string { return es.Token.Literal }
-func (es *ExpressionStatement) String() string {
-	if es.Expression != nil {
-		return es.Expression.String()
-	}
-	return ""
-}
-
-type BlockStatement struct {
-	Token      token.Token // The '{' token
-	Statements []Statement
-}
-
-func (bs *BlockStatement) statementNode()       {}
-func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
-func (bs *BlockStatement) String() string {
-	var out bytes.Buffer
-
-	for _, statement := range bs.Statements {
-		out.WriteString(statement.String())
-	}
 
 	return out.String()
 }
@@ -264,7 +291,7 @@ func (ie *IfExpression) String() string {
 }
 
 type FunctionLiteral struct {
-	Token      token.Token
+	Token      token.Token // the 'fn' token
 	Parameters []*Identifier
 	Body       *BlockStatement
 }
@@ -290,7 +317,7 @@ func (fl *FunctionLiteral) String() string {
 }
 
 type FunctionCallExpression struct {
-	Token     token.Token
+	Token     token.Token // the ( token
 	Function  Expression
 	Arguments []Expression
 }

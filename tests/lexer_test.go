@@ -30,6 +30,7 @@ if (5 < 10) {
 "foo bar"
 ""
 []
+{"name": "mazin"}
 `
 	tests := []struct {
 		expectedType    token.TokenType
@@ -113,6 +114,11 @@ if (5 < 10) {
 		{token.STRING, ""},
 		{token.LBRACKET, "["},
 		{token.RBRACKET, "]"},
+		{token.LBRACE, "{"},
+		{token.STRING, "name"},
+		{token.COLON, ":"},
+		{token.STRING, "mazin"},
+		{token.RBRACE, "}"},
 		{token.EOF, ""},
 	}
 
